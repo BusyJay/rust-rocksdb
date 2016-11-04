@@ -17,15 +17,15 @@
 use libc::{self, c_int, c_void, size_t};
 
 use rocksdb_ffi::{self, DBWriteBatch, DBCFHandle, DBInstance};
-use rocksdb_options::{Options, ReadOptions, UnsafeSnap, WriteOptions, FlushOptions};
+use rocksdb_options::{Options, ReadOptions, UnsafeSnap, WriteOptions, FlushOptions,
+                      IngestExternalFileOptions};
+use std::{fs, ptr, slice};
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
 use std::ffi::{CStr, CString};
-use std::fs;
+use std::fmt::{self, Debug, Formatter};
 use std::ops::Deref;
 use std::path::Path;
-use std::ptr;
-use std::slice;
 use std::str::from_utf8;
 
 const DEFAULT_COLUMN_FAMILY: &'static str = "default";
@@ -40,6 +40,10 @@ impl Drop for CFHandle {
             rocksdb_ffi::rocksdb_column_family_handle_destroy(self.inner);
         }
     }
+}
+
+fn build_cstring_list(str_list: &[&str]) -> Vec<CString> {
+    str_list.into_iter().map(|s| CString::new(s.as_bytes()).unwrap()).collect()
 }
 
 pub struct DB {
@@ -306,9 +310,7 @@ impl DB {
 
             // We need to store our CStrings in an intermediate vector
             // so that their pointers remain valid.
-            let c_cfs: Vec<CString> = cfs_v.iter()
-                .map(|cf| CString::new(cf.as_bytes()).unwrap())
-                .collect();
+            let c_cfs = build_cstring_list(&cfs_v);
 
             let cfnames: Vec<*const _> = c_cfs.iter()
                 .map(|cf| cf.as_ptr())
@@ -806,6 +808,42 @@ impl DB {
     pub fn get_statistics(&self) -> Option<String> {
         self.opts.get_statistics()
     }
+
+    pub fn get_options(&self) -> &Options {
+        &self.opts
+    }
+
+    pub fn ingest_external_file(&self,
+                                opt: &IngestExternalFileOptions,
+                                files: &[&str])
+                                -> Result<(), String> {
+        let c_files = build_cstring_list(files);
+        let c_files_ptrs: Vec<*const _> = c_files.iter().map(|s| s.as_ptr()).collect();
+        unsafe {
+            ffi_try!(rocksdb_ingest_external_file(self.inner,
+                                                  c_files_ptrs.as_ptr(),
+                                                  c_files.len(),
+                                                  opt.inner));
+        }
+        Ok(())
+    }
+
+    pub fn ingest_external_file_cf(&self,
+                                   cf: &CFHandle,
+                                   opt: &IngestExternalFileOptions,
+                                   files: &[&str])
+                                   -> Result<(), String> {
+        let c_files = build_cstring_list(files);
+        let c_files_ptrs: Vec<*const _> = c_files.iter().map(|s| s.as_ptr()).collect();
+        unsafe {
+            ffi_try!(rocksdb_ingest_external_file_cf(self.inner,
+                                                     cf.inner,
+                                                     c_files_ptrs.as_ptr(),
+                                                     c_files_ptrs.len(),
+                                                     opt.inner));
+        }
+        Ok(())
+    }
 }
 
 impl Writable for DB {
@@ -937,6 +975,29 @@ impl Writable for WriteBatch {
 pub struct DBVector {
     base: *mut u8,
     len: usize,
+}
+
+impl Debug for DBVector {
+    fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        unsafe {
+            write!(formatter,
+                   "{:?}",
+                   slice::from_raw_parts(self.base, self.len))
+        }
+    }
+}
+
+impl<'a> PartialEq<&'a [u8]> for DBVector {
+    fn eq(&self, rhs: &&[u8]) -> bool {
+        if self.len != rhs.len() {
+            return false;
+        }
+        unsafe {
+            libc::memcmp(self.base as *mut c_void,
+                         rhs.as_ptr() as *mut c_void,
+                         self.len) == 0
+        }
+    }
 }
 
 impl Deref for DBVector {
