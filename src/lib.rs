@@ -32,6 +32,7 @@ pub use external_file::SstFileWriter;
 pub use librocksdb_sys::{DBCompactionStyle, DBCompressionType, DBRecoveryMode, new_bloom_filter,
                          self as rocksdb_ffi};
 pub use merge_operator::MergeOperands;
-pub use rocksdb::{DB, DBIterator, DBVector, Kv, SeekKey, Writable, WriteBatch, CFHandle, Range};
-pub use rocksdb_options::{BlockBasedOptions, Options, ReadOptions, WriteOptions,
+pub use rocksdb::{DB, DBIterator, DBVector, Kv, SeekKey, Writable, WriteBatch, CFHandle, Range,
+                  BackupEngine};
+pub use rocksdb_options::{BlockBasedOptions, Options, ReadOptions, WriteOptions, RestoreOptions,
                           IngestExternalFileOptions, EnvOptions};

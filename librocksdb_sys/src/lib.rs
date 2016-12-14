@@ -38,6 +38,8 @@ pub enum DBCompactionFilter {}
 pub enum EnvOptions {}
 pub enum SstFileWriter {}
 pub enum IngestExternalFileOptions {}
+pub enum DBBackupEngine {}
+pub enum DBRestoreOptions {}
 
 pub fn new_bloom_filter(bits: c_int) -> *mut DBFilterPolicy {
     unsafe { rocksdb_filterpolicy_create_bloom(bits) }
@@ -145,6 +147,7 @@ extern "C" {
                                                  filter: *mut DBCompactionFilter);
     pub fn rocksdb_options_set_create_if_missing(options: *mut DBOptions, v: bool);
     pub fn rocksdb_options_set_max_open_files(options: *mut DBOptions, files: c_int);
+    pub fn rocksdb_options_set_max_total_wal_size(options: *mut DBOptions, size: u64);
     pub fn rocksdb_options_set_use_fsync(options: *mut DBOptions, v: c_int);
     pub fn rocksdb_options_set_bytes_per_sync(options: *mut DBOptions, bytes: u64);
     pub fn rocksdb_options_set_disable_data_sync(options: *mut DBOptions, v: c_int);
@@ -165,7 +168,8 @@ extern "C" {
     pub fn rocksdb_options_set_max_bytes_for_level_base(options: *mut DBOptions, bytes: u64);
     pub fn rocksdb_options_set_max_bytes_for_level_multiplier(options: *mut DBOptions,
                                                               mul: c_int);
-    pub fn rocksdb_options_set_max_log_file_size(options: *mut DBOptions, bytes: u64);
+    pub fn rocksdb_options_set_max_log_file_size(options: *mut DBOptions, bytes: size_t);
+    pub fn rocksdb_options_set_keep_log_file_num(options: *mut DBOptions, num: size_t);
     pub fn rocksdb_options_set_max_manifest_file_size(options: *mut DBOptions, bytes: u64);
     pub fn rocksdb_options_set_hash_skip_list_rep(options: *mut DBOptions,
                                                   bytes: u64,
@@ -189,6 +193,7 @@ extern "C" {
     pub fn rocksdb_options_statistics_get_string(options: *mut DBOptions) -> *const c_char;
     pub fn rocksdb_options_set_stats_dump_period_sec(options: *mut DBOptions, v: usize);
     pub fn rocksdb_options_set_num_levels(options: *mut DBOptions, v: c_int);
+    pub fn rocksdb_options_set_db_log_dir(options: *mut DBOptions, path: *const c_char);
     pub fn rocksdb_filterpolicy_create_bloom_full(bits_per_key: c_int) -> *mut DBFilterPolicy;
     pub fn rocksdb_filterpolicy_create_bloom(bits_per_key: c_int) -> *mut DBFilterPolicy;
     pub fn rocksdb_open(options: *mut DBOptions,
@@ -530,6 +535,27 @@ extern "C" {
                                            list_len: size_t,
                                            opt: *const IngestExternalFileOptions,
                                            err: *mut *mut c_char);
+
+    // Restore Option
+    pub fn rocksdb_restore_options_create() -> *mut DBRestoreOptions;
+    pub fn rocksdb_restore_options_destroy(ropts: *mut DBRestoreOptions);
+    pub fn rocksdb_restore_options_set_keep_log_files(ropts: *mut DBRestoreOptions, v: c_int);
+
+    // Backup engine
+    // TODO: add more ffis about backup engine.
+    pub fn rocksdb_backup_engine_open(options: *const DBOptions,
+                                      path: *const c_char,
+                                      err: *mut *mut c_char)
+                                      -> *mut DBBackupEngine;
+    pub fn rocksdb_backup_engine_create_new_backup(be: *mut DBBackupEngine,
+                                                   db: *mut DBInstance,
+                                                   err: *mut *mut c_char);
+    pub fn rocksdb_backup_engine_close(be: *mut DBBackupEngine);
+    pub fn rocksdb_backup_engine_restore_db_from_latest_backup(be: *mut DBBackupEngine,
+                                                               db_path: *const c_char,
+                                                               wal_path: *const c_char,
+                                                               ropts: *const DBRestoreOptions,
+                                                               err: *mut *mut c_char);
 }
 
 #[cfg(test)]

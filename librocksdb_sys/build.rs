@@ -10,6 +10,7 @@ macro_rules! t {
 }
 
 fn main() {
+    println!("")
     if !cfg!(feature = "static-link") {
         return;
     }

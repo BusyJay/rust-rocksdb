@@ -20,7 +20,8 @@ use merge_operator::{self, MergeOperatorCallback, full_merge_callback, partial_m
 use merge_operator::MergeFn;
 
 use rocksdb_ffi::{self, DBOptions, DBWriteOptions, DBBlockBasedTableOptions, DBReadOptions,
-                  DBCompressionType, DBRecoveryMode, DBSnapshot, DBInstance, DBFlushOptions};
+                  DBRestoreOptions, DBCompressionType, DBRecoveryMode, DBSnapshot, DBInstance,
+                  DBFlushOptions};
 use std::ffi::{CStr, CString};
 use std::mem;
 
@@ -349,6 +350,12 @@ impl Options {
         }
     }
 
+    pub fn set_max_total_wal_size(&mut self, size: u64) {
+        unsafe {
+            rocksdb_ffi::rocksdb_options_set_max_total_wal_size(self.inner, size);
+        }
+    }
+
     pub fn set_use_fsync(&mut self, useit: bool) {
         unsafe {
             if useit {
@@ -542,6 +549,25 @@ impl Options {
             rocksdb_ffi::rocksdb_options_set_num_levels(self.inner, n);
         }
     }
+
+    pub fn set_db_log_dir(&mut self, path: &str) {
+        let path = CString::new(path.as_bytes()).unwrap();
+        unsafe {
+            rocksdb_ffi::rocksdb_options_set_db_log_dir(self.inner, path.as_ptr());
+        }
+    }
+
+    pub fn set_max_log_file_size(&mut self, size: u64) {
+        unsafe {
+            rocksdb_ffi::rocksdb_options_set_max_log_file_size(self.inner, size as size_t);
+        }
+    }
+
+    pub fn set_keep_log_file_num(&mut self, num: u64) {
+        unsafe {
+            rocksdb_ffi::rocksdb_options_set_keep_log_file_num(self.inner, num as size_t);
+        }
+    }
 }
 
 pub struct FlushOptions {
@@ -644,6 +670,31 @@ impl Drop for EnvOptions {
     fn drop(&mut self) {
         unsafe {
             rocksdb_ffi::rocksdb_envoptions_destroy(self.inner);
+        }
+    }
+}
+
+pub struct RestoreOptions {
+    pub inner: *mut DBRestoreOptions,
+}
+
+impl RestoreOptions {
+    pub fn new() -> RestoreOptions {
+        unsafe { RestoreOptions { inner: rocksdb_ffi::rocksdb_restore_options_create() } }
+    }
+
+    pub fn set_keep_log_files(&mut self, flag: bool) {
+        unsafe {
+            rocksdb_ffi::rocksdb_restore_options_set_keep_log_files(self.inner,
+                                                                    if flag { 1 } else { 0 })
+        }
+    }
+}
+
+impl Drop for RestoreOptions {
+    fn drop(&mut self) {
+        unsafe {
+            rocksdb_ffi::rocksdb_restore_options_destroy(self.inner);
         }
     }
 }
