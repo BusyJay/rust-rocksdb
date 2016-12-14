@@ -10,7 +10,7 @@ macro_rules! t {
 }
 
 fn main() {
-    println!("")
+    println!("rerun-if-changed=build.sh");
     if !cfg!(feature = "static-link") {
         return;
     }
