@@ -91,7 +91,7 @@ fi
 set -e
 
 uncommitted_code=`git diff HEAD`
-LAST_MASTER=`git merge-base master HEAD`
+LAST_MASTER=`git merge-base origin/master HEAD`
 
 # If there's no uncommitted changes, we assume user are doing post-commit
 # format check, in which case we'll check the modified lines since last commit

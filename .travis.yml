@@ -14,11 +14,18 @@ os:
   - linux
 #  - osx
 
+addons:
+   apt:
+      packages:
+      - clang
+
 before_script:
 - make -f travis-build/Makefile prepare-rustfmt
 
 script:
-- cargo fmt && git diff-index --quiet HEAD -- || (echo please make format and run tests before creating a pr!; exit 1)
+- export PATH="./librocksdb_sys/crocksdb/:$PATH"
+- curl -L http://goo.gl/iUW1u2 -o ./librocksdb_sys/crocksdb/clang-format-diff.py
+- format-diff.sh && cargo fmt --write-mode diff && cd librocksdb_sys && cargo fmt --write-mode diff || (echo please make format and run tests before creating a pr!; exit 1)
 - cargo build --features static-link
 - cargo test --all --features static-link
 
