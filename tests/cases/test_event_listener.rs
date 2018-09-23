@@ -15,7 +15,7 @@ use rocksdb::*;
 use std::sync::atomic::*;
 use std::sync::Arc;
 use tempdir::TempDir;
-use test_ingest_external_file::gen_sst;
+use cases::test_ingest_external_file::gen_sst;
 
 #[derive(Default, Clone)]
 struct EventCounter {
